@@ -1,0 +1,35 @@
+name: Propose Claude configuration updates
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'managed/**'
+      - 'scripts/sync.py'
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: 'Only report changes, do not create PRs'
+        type: boolean
+        default: true
+permissions:
+  contents: read
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Verify cross-repository credential
+        env:
+          SYNC_TOKEN: ${{ secrets.SYNC_TOKEN }}
+        run: |
+          if [ -z "$SYNC_TOKEN" ]; then
+            echo "::notice::SYNC_TOKEN not configured. No changes made."
+            exit 0
+          fi
+      - name: Propose changes as pull requests
+        env:
+          SYNC_TOKEN: ${{ secrets.SYNC_TOKEN }}
+          DRY_RUN: ${{ github.event_name == 'workflow_dispatch' && inputs.dry_run || false }}
+        run: |
+          if [ -z "$SYNC_TOKEN" ]; then exit 0; fi
+          python3 scripts/sync.py
